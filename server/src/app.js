@@ -14,6 +14,8 @@ import reportRoutes from "./routes/reportRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import blacklistRoutes from "./routes/blacklistRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import registrationRoutes from "./routes/registrationRoutes.js";
 import { notFound, errorHandler } from "./middleware/error.js";
 
 const app = express();
@@ -31,6 +33,8 @@ app.use("/api", writeLimiter);
 app.get("/api/health", (req, res) => res.json({ success: true, message: "OK", data: { status: "up" } }));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/registrations", registrationRoutes);
 app.use("/api/visitors", visitorRoutes);
 app.use("/api/visits", visitRoutes);
 app.use("/api/host", hostRoutes);

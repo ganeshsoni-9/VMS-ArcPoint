@@ -1,5 +1,8 @@
 import { Parser } from "json2csv";
 import Visit from "../models/Visit.js";
+import User from "../models/User.js";
+import RegistrationRequest from "../models/RegistrationRequest.js";
+import AuditLog from "../models/AuditLog.js";
 import { asyncHandler } from "../middleware/error.js";
 
 function startOfDay(d) {
@@ -15,6 +18,14 @@ function endOfDay(d) {
 
 export const dashboard = asyncHandler(async (req, res) => {
   const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 7);
+
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
   const [
     visitorsToday,
     currentlyInside,
@@ -23,6 +34,23 @@ export const dashboard = asyncHandler(async (req, res) => {
     cancelled,
     statusDistribution,
     recentVisits,
+    totalUsers,
+    totalAdmins,
+    totalReceptionists,
+    totalEmployees,
+    activeUsers,
+    inactiveUsers,
+    publicRegistrationsCount,
+    adminCreatedUsersCount,
+    registrationsToday,
+    registrationsThisWeek,
+    registrationsThisMonth,
+    totalRegistrationRequests,
+    pendingRegistrations,
+    approvedRegistrations,
+    rejectedRegistrations,
+    recentRegistrations,
+    recentUserActivity,
   ] = await Promise.all([
     Visit.countDocuments({ visitDate: { $gte: startOfDay(today), $lte: endOfDay(today) } }),
     Visit.countDocuments({ status: "INSIDE" }),
@@ -31,6 +59,32 @@ export const dashboard = asyncHandler(async (req, res) => {
     Visit.countDocuments({ status: "CANCELLED" }),
     Visit.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
     Visit.find().populate("visitor", "name").populate("host", "name").sort({ createdAt: -1 }).limit(8),
+
+    // User & Registration Metrics
+    User.countDocuments({}),
+    User.countDocuments({ role: "admin" }),
+    User.countDocuments({ role: "receptionist" }),
+    User.countDocuments({ role: "employee" }),
+    User.countDocuments({ active: true }),
+    User.countDocuments({ active: false }),
+    User.countDocuments({ registrationSource: "PUBLIC_REGISTRATION" }),
+    User.countDocuments({ registrationSource: "ADMIN_CREATED" }),
+
+    // Time window metrics
+    User.countDocuments({ createdAt: { $gte: startOfDay(today), $lte: endOfDay(today) } }),
+    User.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+    User.countDocuments({ createdAt: { $gte: firstDayOfMonth } }),
+
+    RegistrationRequest.countDocuments({}),
+    RegistrationRequest.countDocuments({ status: "PENDING" }),
+    RegistrationRequest.countDocuments({ status: "APPROVED" }),
+    RegistrationRequest.countDocuments({ status: "REJECTED" }),
+
+    RegistrationRequest.find().select("-passwordHash").sort({ createdAt: -1 }).limit(5),
+    AuditLog.find({ action: { $regex: "^(USER_|REGISTRATION_|LOGIN)" } })
+      .populate("actor", "name email")
+      .sort({ createdAt: -1 })
+      .limit(6),
   ]);
 
   const durationAgg = await Visit.aggregate([
@@ -52,10 +106,23 @@ export const dashboard = asyncHandler(async (req, res) => {
     { $project: { name: "$department.name", count: 1, _id: 0 } },
   ]);
 
+  // Registration trend for last 30 days
+  const registrationTrendAgg = await User.aggregate([
+    { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+    {
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
   res.json({
     success: true,
     message: "OK",
     data: {
+      // Visitor Stats
       visitorsToday,
       currentlyInside,
       completedToday,
@@ -66,6 +133,46 @@ export const dashboard = asyncHandler(async (req, res) => {
       statusDistribution,
       departmentStats: departmentStatsAgg,
       recentVisits,
+
+      // User & Registration Analytics
+      totalUsers,
+      totalAdmins,
+      totalReceptionists,
+      totalEmployees,
+      activeUsers,
+      inactiveUsers,
+      publicRegistrationsCount,
+      adminCreatedUsersCount,
+      registrationsToday,
+      registrationsThisWeek,
+      registrationsThisMonth,
+      totalRegistrationRequests,
+      pendingRegistrations,
+      approvedRegistrations,
+      rejectedRegistrations,
+
+      // Recharts Datasets
+      registrationStatusDistribution: [
+        { name: "Pending", count: pendingRegistrations, fill: "#f59e0b" },
+        { name: "Approved", count: approvedRegistrations, fill: "#10b981" },
+        { name: "Rejected", count: rejectedRegistrations, fill: "#ef4444" },
+      ],
+      usersByRole: [
+        { name: "Admin", count: totalAdmins, fill: "#8b5cf6" },
+        { name: "Receptionist", count: totalReceptionists, fill: "#14b8a6" },
+        { name: "Employee", count: totalEmployees, fill: "#3b82f6" },
+      ],
+      registrationSourceDistribution: [
+        { name: "Public Registration", count: publicRegistrationsCount, fill: "#06b6d4" },
+        { name: "Admin Created", count: adminCreatedUsersCount, fill: "#6366f1" },
+      ],
+      registrationTrend: registrationTrendAgg.map((item) => ({
+        date: item._id,
+        registrations: item.count,
+      })),
+
+      recentRegistrations,
+      recentUserActivity,
     },
   });
 });
@@ -95,7 +202,6 @@ export const repeatVisitors = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "OK", data: { items } });
 });
 
-// CSV export respects the same filters as listVisits; never includes idDocRef.
 export const exportCsv = asyncHandler(async (req, res) => {
   const { status, department, host, from, to } = req.query;
   const query = {};

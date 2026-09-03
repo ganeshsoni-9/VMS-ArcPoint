@@ -1,9 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, UserPlus, Users, Building2, FileBarChart, ShieldCheck, Settings, DoorOpen, Bell, Inbox } from "lucide-react";
+import { LayoutDashboard, UserPlus, Users, Building2, FileBarChart, ShieldCheck, Settings, DoorOpen, Bell, Inbox, FileText } from "lucide-react";
 
 const LINKS = {
   admin: [
     { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/admin/registrations", label: "Registrations", icon: FileText },
+    { to: "/admin/users", label: "Users", icon: UserPlus },
     { to: "/admin/employees", label: "Employees", icon: Users },
     { to: "/admin/departments", label: "Departments", icon: Building2 },
     { to: "/admin/reports", label: "Reports", icon: FileBarChart },

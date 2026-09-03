@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import User from "../models/User.js";
+import RegistrationRequest from "../models/RegistrationRequest.js";
 import { logAudit } from "../utils/audit.js";
 import { asyncHandler } from "../middleware/error.js";
 
@@ -16,10 +17,42 @@ export const login = asyncHandler(async (req, res) => {
     return res.status(422).json({ success: false, message: "Validation failed", errors: parsed.error.issues });
   }
   const { email, password } = parsed.data;
+  const cleanEmail = email.toLowerCase().trim();
 
-  const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user || !user.active) {
+  const user = await User.findOne({ email: cleanEmail });
+
+  if (!user) {
+    // Check if there is a RegistrationRequest for this email
+    const registration = await RegistrationRequest.findOne({ email: cleanEmail }).sort({ createdAt: -1 });
+
+    if (registration) {
+      if (registration.status === "PENDING") {
+        return res.status(401).json({
+          success: false,
+          message: "Your registration is pending administrator approval.",
+          errors: [],
+        });
+      }
+      if (registration.status === "REJECTED") {
+        return res.status(401).json({
+          success: false,
+          message: `Your registration request has been rejected. ${
+            registration.rejectionReason ? `Reason: ${registration.rejectionReason}` : "Please contact the administrator."
+          }`,
+          errors: [],
+        });
+      }
+    }
+
     return res.status(401).json({ success: false, message: "Invalid email or password", errors: [] });
+  }
+
+  if (!user.active) {
+    return res.status(401).json({
+      success: false,
+      message: "Your user account is inactive. Please contact the administrator.",
+      errors: [],
+    });
   }
 
   const match = await bcrypt.compare(password, user.passwordHash);

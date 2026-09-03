@@ -3,8 +3,12 @@ import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 
 import Login from "./pages/common/Login.jsx";
+import Register from "./pages/common/Register.jsx";
+import RegisterStatus from "./pages/common/RegisterStatus.jsx";
 
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import Registrations from "./pages/admin/Registrations.jsx";
+import Users from "./pages/admin/Users.jsx";
 import Employees from "./pages/admin/Employees.jsx";
 import Departments from "./pages/admin/Departments.jsx";
 import Reports from "./pages/admin/Reports.jsx";
@@ -31,9 +35,13 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/register/status/:id" element={<RegisterStatus />} />
 
       <Route element={<ProtectedRoute roles={["admin"]} />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/registrations" element={<Registrations />} />
+        <Route path="/admin/users" element={<Users />} />
         <Route path="/admin/employees" element={<Employees />} />
         <Route path="/admin/departments" element={<Departments />} />
         <Route path="/admin/reports" element={<Reports />} />

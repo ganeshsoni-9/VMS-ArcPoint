@@ -19,6 +19,86 @@ export const listMyRequests = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "OK", data: { items } });
 });
 
+export const getEmployeeDashboard = asyncHandler(async (req, res) => {
+  if (!req.user.employee) {
+    return res.status(403).json({
+      success: false,
+      message: "No employee profile linked to this account",
+      errors: [],
+    });
+  }
+
+  const hostId = req.user.employee;
+  const today = new Date();
+  const startOfDay = new Date(today);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(today);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const [
+    pendingCount,
+    approvedCount,
+    rejectedCount,
+    currentlyInsideCount,
+    pendingRequests,
+    todayVisitors,
+    currentlyInsideVisitors,
+    recentNotifications,
+    unreadNotificationCount,
+  ] = await Promise.all([
+    Visit.countDocuments({ host: hostId, status: "PENDING" }),
+    Visit.countDocuments({ host: hostId, status: { $in: ["APPROVED", "COMPLETED", "INSIDE"] } }),
+    Visit.countDocuments({ host: hostId, status: "REJECTED" }),
+    Visit.countDocuments({ host: hostId, status: "INSIDE" }),
+
+    // Pending requests list
+    Visit.find({ host: hostId, status: "PENDING" })
+      .populate("visitor", "name mobile organisation")
+      .populate("department", "name")
+      .sort({ createdAt: -1 }),
+
+    // Today's visitors list
+    Visit.find({
+      host: hostId,
+      visitDate: { $gte: startOfDay, $lte: endOfDay },
+    })
+      .populate("visitor", "name mobile organisation")
+      .populate("department", "name")
+      .sort({ createdAt: -1 }),
+
+    // Currently inside visitors list
+    Visit.find({ host: hostId, status: "INSIDE" })
+      .populate("visitor", "name mobile organisation")
+      .populate("department", "name")
+      .sort({ checkInTime: -1 }),
+
+    // Recent Notifications
+    Notification.find({ recipient: hostId }).sort({ createdAt: -1 }).limit(5),
+
+    // Unread count
+    Notification.countDocuments({ recipient: hostId, isRead: false }),
+  ]);
+
+  res.json({
+    success: true,
+    message: "OK",
+    data: {
+      summary: {
+        pendingRequests: pendingCount,
+        approvedRequests: approvedCount,
+        rejectedRequests: rejectedCount,
+        currentlyInside: currentlyInsideCount,
+      },
+      pendingRequests,
+      todayVisitors,
+      currentlyInsideVisitors,
+      recentNotifications,
+      unreadNotificationCount,
+    },
+  });
+});
+
 async function respond(req, res, decision) {
   const visit = await Visit.findById(req.params.id);
   if (!visit) return res.status(404).json({ success: false, message: "Visit not found", errors: [] });
