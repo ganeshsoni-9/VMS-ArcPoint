@@ -99,45 +99,7 @@ export const getEmployeeDashboard = asyncHandler(async (req, res) => {
   });
 });
 
-async function respond(req, res, decision) {
-  const visit = await Visit.findById(req.params.id);
-  if (!visit) return res.status(404).json({ success: false, message: "Visit not found", errors: [] });
+import { approveVisit, rejectVisit } from "./visitController.js";
 
-  if (!req.user.employee || visit.host.toString() !== req.user.employee.toString()) {
-    return res.status(403).json({ success: false, message: "You are not the host for this visit", errors: [] });
-  }
-  if (visit.status !== "PENDING") {
-    return res.status(400).json({ success: false, message: "This request has already been responded to", errors: [] });
-  }
-
-  visit.status = decision === "APPROVED" ? "APPROVED" : "REJECTED";
-  visit.hostResponse = decision;
-  visit.hostResponseTime = new Date();
-  if (decision === "REJECTED") {
-    visit.denialReason = req.body.reason || "";
-    visit.activeVisitor = null;
-  }
-  await visit.save();
-
-  await Notification.create({
-    recipient: visit.host,
-    type: "VISIT_RESPONSE_RECORDED",
-    title: `Visit ${decision.toLowerCase()}`,
-    message: `You ${decision.toLowerCase()} visit ${visit.visitorPassId}`,
-    relatedVisit: visit._id,
-    isRead: true,
-  });
-
-  await logAudit({
-    actor: req.user._id,
-    action: decision === "APPROVED" ? "APPROVE_VISIT" : "REJECT_VISIT",
-    entityType: "Visit",
-    entityId: visit._id,
-    ip: req.ip,
-  });
-
-  res.json({ success: true, message: `Visit ${decision.toLowerCase()}`, data: { visit } });
-}
-
-export const approveRequest = asyncHandler((req, res) => respond(req, res, "APPROVED"));
-export const rejectRequest = asyncHandler((req, res) => respond(req, res, "REJECTED"));
+export const approveRequest = approveVisit;
+export const rejectRequest = rejectVisit;

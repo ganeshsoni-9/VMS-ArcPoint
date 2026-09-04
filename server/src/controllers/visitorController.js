@@ -80,8 +80,8 @@ export const registerVisitor = asyncHandler(async (req, res) => {
   await Notification.create({
     recipient: body.host,
     type: "VISIT_REQUEST",
-    title: "New visitor request",
-    message: `${visitor.name} is requesting to visit you (${visitorPassId})`,
+    title: "New Visitor Request",
+    message: `${visitor.name} has requested to meet you. Please review and approve or reject the visitor request.`,
     relatedVisit: visit._id,
   });
 

@@ -30,6 +30,7 @@ export default function EmployeeDashboard() {
   const [data, setData] = useState(null);
   const [state, setState] = useState("loading");
   const [submittingId, setSubmittingId] = useState(null);
+  const [approvingVisit, setApprovingVisit] = useState(null);
   const [rejectingVisit, setRejectingVisit] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const { toast, showToast, clearToast } = useToast();
@@ -50,11 +51,13 @@ export default function EmployeeDashboard() {
     loadDashboard();
   }, []);
 
-  async function handleApprove(visitId) {
-    setSubmittingId(visitId);
+  async function handleApproveSubmit() {
+    if (!approvingVisit) return;
+    setSubmittingId(approvingVisit._id);
     try {
-      await api.patch(`/host/requests/${visitId}/approve`);
-      showToast("Visitor request approved successfully!", "success");
+      await api.patch(`/host/requests/${approvingVisit._id}/approve`);
+      showToast("Visitor request approved successfully.", "success");
+      setApprovingVisit(null);
       await loadDashboard();
     } catch (err) {
       showToast(err.response?.data?.message || "Failed to approve request", "error");
@@ -238,7 +241,7 @@ export default function EmployeeDashboard() {
                           <div className="inline-flex items-center gap-2">
                             <button
                               disabled={submittingId === v._id}
-                              onClick={() => handleApprove(v._id)}
+                              onClick={() => setApprovingVisit(v)}
                               className="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium inline-flex items-center gap-1 shadow-sm transition-colors"
                             >
                               <Check size={14} />
@@ -415,6 +418,34 @@ export default function EmployeeDashboard() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* APPROVAL CONFIRMATION MODAL */}
+      {approvingVisit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl border border-gray-200 max-w-sm w-full p-6 shadow-xl text-center">
+            <h3 className="text-base font-bold text-gray-900 mb-2">Approve Visitor Request</h3>
+            <p className="text-xs text-gray-600 mb-6 leading-relaxed">
+              Approve visitor request from <strong>{approvingVisit.visitor?.name}</strong>?
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                disabled={submittingId === approvingVisit._id}
+                onClick={() => setApprovingVisit(null)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={submittingId === approvingVisit._id}
+                onClick={handleApproveSubmit}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg disabled:opacity-50"
+              >
+                {submittingId === approvingVisit._id ? "Approving..." : "Approve"}
+              </button>
+            </div>
           </div>
         </div>
       )}

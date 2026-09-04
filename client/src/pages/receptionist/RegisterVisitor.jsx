@@ -42,10 +42,17 @@ export default function RegisterVisitor() {
       <h1 className="text-lg font-semibold mb-4">Register Visitor</h1>
 
       {result && (
-        <div className="bg-green-50 border border-green-200 text-green-800 rounded-xl p-4 mb-6 text-sm">
-          <p className="font-medium">{result.visitor.name} registered successfully.</p>
-          <p>Visitor ID: <span className="font-mono">{result.visit.visitorPassId}</span></p>
-          {result.blacklisted && <p className="text-red-600 mt-1">⚠ This visitor is on the blacklist (flagged, not blocked).</p>}
+        <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-xl p-4 mb-6 text-sm shadow-sm">
+          <p className="font-semibold text-blue-950 mb-1">
+            Visitor registered successfully. The request has been sent to the selected employee for approval.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mt-2 pt-2 border-t border-blue-200/60">
+            <div><span className="text-gray-500">Visitor Pass ID:</span> <span className="font-mono font-bold text-blue-700">{result.visit.visitorPassId}</span></div>
+            <div><span className="text-gray-500">Visitor Name:</span> <span className="font-medium text-gray-900">{result.visitor.name}</span></div>
+            <div><span className="text-gray-500">Host:</span> <span className="font-medium text-gray-900">{employees.find((e) => e._id === result.visit.host)?.name || "Selected Employee"}</span></div>
+            <div><span className="text-gray-500">Status:</span> <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800">Pending Employee Approval</span></div>
+          </div>
+          {result.blacklisted && <p className="text-red-600 mt-2 text-xs font-semibold">⚠ Warning: Visitor is flagged on the blacklist.</p>}
         </div>
       )}
 

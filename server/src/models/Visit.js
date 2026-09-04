@@ -30,6 +30,11 @@ const visitSchema = new mongoose.Schema(
     hostResponseTime: { type: Date, default: null },
     cancellationReason: { type: String, default: null },
     denialReason: { type: String, default: null },
+    approvedAt: { type: Date, default: null },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    rejectedAt: { type: Date, default: null },
+    rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    rejectionReason: { type: String, default: null },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     // denormalized flag to enforce "only one active visit per visitor" via a partial unique index
     activeVisitor: { type: mongoose.Schema.Types.ObjectId, ref: "Visitor", default: null },
