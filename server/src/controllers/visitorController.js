@@ -13,7 +13,10 @@ import { ACTIVE_STATUSES } from "../models/Visit.js";
 const registerSchema = z.object({
   name: z.string().min(1, "Full name is required"),
   mobile: z.string().min(6, "Valid mobile number is required"),
-  email: z.string().email().optional().or(z.literal("")),
+  email: z
+    .string()
+    .min(1, "Visitor email is required to send approval/rejection updates")
+    .email("Please enter a valid email address"),
   organisation: z.string().optional().default(""),
   host: z.string().min(1, "Host is required"),
   department: z.string().min(1, "Department is required"),

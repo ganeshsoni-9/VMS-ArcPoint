@@ -102,6 +102,14 @@ export default function RegisterVisitor() {
       return;
     }
 
+    if (!form.email.trim()) {
+      showToast(
+        "Please enter visitor email — needed to send approval/rejection updates",
+        "error"
+      );
+      return;
+    }
+
     if (!form.host) {
       showToast("Please select a host / employee", "error");
       return;
@@ -341,9 +349,10 @@ export default function RegisterVisitor() {
                     <Field
                       label="Email Address"
                       icon={Mail}
-                      hint="Optional"
+                      hint="Required — used to send approval/rejection updates"
                     >
                       <input
+                        required
                         type="email"
                         placeholder="visitor@example.com"
                         value={form.email}

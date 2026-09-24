@@ -4,7 +4,7 @@ const visitorSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     mobile: { type: String, required: true, index: true },
-    email: { type: String, default: "" },
+    email: { type: String, required: true, trim: true, lowercase: true },
     organisation: { type: String, default: "" },
     photoRef: { type: String, default: null },
     idDocRef: { type: String, default: null },
